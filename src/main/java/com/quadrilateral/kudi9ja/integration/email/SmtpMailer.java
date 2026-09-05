@@ -27,7 +27,7 @@ import org.thymeleaf.context.Context;
  * than an honest failure.
  */
 @Component
-@ConditionalOnProperty(name = "kudi9ja.mail.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "kudi9ja.mail.provider", havingValue = "smtp")
 public class SmtpMailer implements Mailer {
 
     private static final Logger log = LoggerFactory.getLogger(SmtpMailer.class);

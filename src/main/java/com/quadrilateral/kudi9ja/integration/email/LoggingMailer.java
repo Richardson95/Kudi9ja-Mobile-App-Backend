@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
  * can read. Retrieve codes in tests from the repository, not from here.
  */
 @Component
-@ConditionalOnProperty(name = "kudi9ja.mail.enabled", havingValue = "false")
+@ConditionalOnProperty(name = "kudi9ja.mail.provider", havingValue = "none", matchIfMissing = true)
 public class LoggingMailer implements Mailer {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingMailer.class);

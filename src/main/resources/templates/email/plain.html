@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!-- The shell a plain-text message is wrapped in, so even an unstyled note
+     carries the company name and the RC number the documents require. -->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0; padding:0; background:#f4f4f1; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#1a1a17;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f1; padding:32px 16px;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+           style="max-width:520px; background:#ffffff; border:1px solid #e2e0d8; border-radius:8px;">
+      <tr><td style="padding:28px 32px 0 32px;">
+        <div style="font-size:19px; font-weight:700; letter-spacing:-0.3px;" th:text="${product}">Kudi9ja</div>
+      </td></tr>
+      <tr><td style="padding:18px 32px 0 32px;">
+        <p style="margin:0; font-size:15px; line-height:1.6; white-space:pre-line;" th:text="${body}">Message.</p>
+      </td></tr>
+      <tr><td style="padding:24px 32px 28px 32px;">
+        <div style="border-top:1px solid #e2e0d8; padding-top:16px;">
+          <p style="margin:0 0 4px 0; font-size:12px; line-height:1.55; color:#8a887e;">
+            <span th:text="${company}">Quadrilateral Technologies Limited</span>
+            (<span th:text="${rcNumber}">RC 1657731</span>), Lagos, Nigeria.
+          </p>
+          <p style="margin:0; font-size:12px; line-height:1.55; color:#8a887e;">
+            <span th:text="${supportEmail}">support@kudi9ja.com</span> &middot;
+            <span th:text="${supportPhone}">+234 800 5834 952</span>
+          </p>
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

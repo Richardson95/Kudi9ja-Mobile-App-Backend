@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<!--
+  The one-time code.
+
+  Built as a table with inline styles because that is what mail clients render
+  reliably — Outlook in particular ignores most of a stylesheet. It is not the
+  way anybody would write a web page, and it is the way an email arrives looking
+  the same in Gmail, Outlook and Apple Mail.
+
+  The code is large and selectable. Somebody reading this on a phone is going to
+  switch apps to type it, so it has to be readable at a glance and easy to copy.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${product} + ' verification code'">Kudi9ja verification code</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f4f1; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#1a1a17;">
+
+<!-- Shown in the inbox list beneath the subject, then hidden in the body. -->
+<div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+  Your code expires in <span th:text="${minutes}">10</span> minutes. We will never ask you for it.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f1; padding:32px 16px;">
+  <tr>
+    <td align="center">
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="max-width:520px; background:#ffffff; border:1px solid #e2e0d8; border-radius:8px;">
+
+        <!-- Masthead -->
+        <tr>
+          <td style="padding:28px 32px 0 32px;">
+            <div style="font-size:19px; font-weight:700; letter-spacing:-0.3px; color:#1a1a17;"
+                 th:text="${product}">Kudi9ja</div>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:20px 32px 0 32px;">
+            <p style="margin:0 0 14px 0; font-size:15px; line-height:1.55;">
+              Hello <span th:text="${name}">there</span>,
+            </p>
+            <p style="margin:0 0 22px 0; font-size:15px; line-height:1.55;">
+              Use this code to <span th:text="${purpose}">verify your email address</span>.
+            </p>
+          </td>
+        </tr>
+
+        <!-- The code -->
+        <tr>
+          <td style="padding:0 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#f6f5f1; border:1px solid #e2e0d8; border-radius:6px;">
+              <tr>
+                <td align="center" style="padding:22px 16px;">
+                  <div style="font-family:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;
+                              font-size:34px; font-weight:700; letter-spacing:9px;
+                              color:#1a1a17; line-height:1;"
+                       th:text="${code}">123456</div>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:12px 0 0 0; font-size:13px; line-height:1.5; color:#6b6a62;">
+              It expires in <strong th:text="${minutes}">10</strong> minutes and can only be used once.
+            </p>
+          </td>
+        </tr>
+
+        <!-- The warning that matters -->
+        <tr>
+          <td style="padding:22px 32px 0 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#fdf6e7; border-left:3px solid #8a6410; border-radius:0 4px 4px 0;">
+              <tr>
+                <td style="padding:12px 14px;">
+                  <p style="margin:0; font-size:13px; line-height:1.55; color:#5c4a15;">
+                    <strong>Nobody at <span th:text="${product}">Kudi9ja</span> will ever ask you
+                    for this code.</strong> Not by phone, not by email, not on WhatsApp. If somebody
+                    asks, they are trying to take your money.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:20px 32px 0 32px;">
+            <p style="margin:0; font-size:13.5px; line-height:1.55; color:#6b6a62;">
+              If you did not ask for this code, you can ignore this email — nothing has
+              changed on your account. If it keeps happening, tell us at
+              <a th:href="'mailto:' + ${supportEmail}" th:text="${supportEmail}"
+                 style="color:#2d5a4a;">support@kudi9ja.com</a>.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer: the company, not the product -->
+        <tr>
+          <td style="padding:24px 32px 28px 32px;">
+            <div style="border-top:1px solid #e2e0d8; padding-top:16px;">
+              <p style="margin:0 0 4px 0; font-size:12px; line-height:1.55; color:#8a887e;">
+                <span th:text="${company}">Quadrilateral Technologies Limited</span>
+                (<span th:text="${rcNumber}">RC 1657731</span>), Lagos, Nigeria.
+              </p>
+              <p style="margin:0; font-size:12px; line-height:1.55; color:#8a887e;">
+                <span th:text="${supportEmail}">support@kudi9ja.com</span>
+                &middot;
+                <span th:text="${supportPhone}">+234 800 5834 952</span>
+              </p>
+            </div>
+          </td>
+        </tr>
+
+      </table>
+
+      <p style="margin:16px 0 0 0; font-size:11.5px; color:#a3a196; max-width:520px;">
+        This is an automated message about your
+        <span th:text="${product}">Kudi9ja</span> account.
+      </p>
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

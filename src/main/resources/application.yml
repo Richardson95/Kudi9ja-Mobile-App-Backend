@@ -231,11 +231,17 @@ kudi9ja:
     # Handsets nobody has opened in this long are dropped from the register.
     stale-device-days: 180
 
-  # Whether email actually leaves the building. Off sends nothing and logs the
-  # message instead, which is the right behaviour for a local run and the wrong
-  # one anywhere a customer is waiting for a code.
+  # How email leaves the building.
+  #   resend — the transactional provider
+  #   smtp   — a plain mail server
+  #   none   — logged, not sent. Sign-up cannot complete: the code never lands.
   mail:
-    enabled: ${MAIL_ENABLED:true}
+    provider: ${MAIL_PROVIDER:none}
+    api-key: ${RESEND_API_KEY:}
+    from: ${MAIL_FROM:no-reply@kudi9ja.com}
+    # Where a customer's reply goes. A no-reply address that silently swallows
+    # replies is how somebody trying to report fraud gets ignored.
+    reply-to: ${MAIL_REPLY_TO:support@kudi9ja.com}
 
   cors:
     allowed-origins: ${CORS_ORIGINS:}
@@ -283,7 +289,7 @@ kudi9ja:
   kyc:
     provider: sandbox
   mail:
-    enabled: false
+    provider: none
   # No Firebase project locally; the logging sender records what would go out.
   push:
     provider: ""

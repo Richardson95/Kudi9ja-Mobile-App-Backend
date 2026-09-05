@@ -22,6 +22,7 @@ public record Kudi9jaProperties(
         Jwt jwt,
         Storage storage,
         Otp otp,
+        Mail mail,
         Bootstrap bootstrap,
         Jobs jobs,
         Push push,
@@ -80,6 +81,24 @@ public record Kudi9jaProperties(
             Duration signedUrlTtl,
             long maxReceiptBytes,
             List<String> allowedReceiptTypes) {
+    }
+
+    /**
+     * How email leaves the building.
+     *
+     * @param provider {@code resend}, {@code smtp}, or {@code none} — which
+     *                 logs the message instead of sending it. A deployment
+     *                 without email still runs; sign-up simply cannot complete,
+     *                 because the one-time code never arrives.
+     * @param apiKey   Resend's key. Secret configuration, never in source.
+     * @param from     the address customers see. Must be on a domain verified
+     *                 with the provider, or the message is silently dropped.
+     */
+    public record Mail(
+            String provider,
+            String apiKey,
+            String from,
+            String replyTo) {
     }
 
     public record Otp(
