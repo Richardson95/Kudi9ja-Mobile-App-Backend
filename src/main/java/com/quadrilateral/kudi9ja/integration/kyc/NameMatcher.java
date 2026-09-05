@@ -1,0 +1,88 @@
+package com.quadrilateral.kudi9ja.integration.kyc;
+
+import java.text.Normalizer;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
+
+/**
+ * Whether two renderings of a name are the same person.
+ *
+ * <p>An exact string comparison would be useless here and unfair to customers.
+ * Nigerian names reach us in every order and spelling: a bank holds
+ * {@code ADEYEMI CHIOMA}, the NIMC holds {@code Chioma Grace Adeyemi}, and the
+ * customer types {@code Chioma Adeyemi}. All three are the same person, and
+ * refusing a payout over word order would be a bug, not a control.
+ *
+ * <p>So the comparison is on the <b>set of name parts</b>, accent- and
+ * punctuation-insensitive, and a match requires every part of the shorter name
+ * to appear in the longer one. That accepts a dropped middle name and a
+ * reordering, and still refuses a different person.
+ */
+public final class NameMatcher {
+
+    /** Titles and suffixes carry no identity and would only cause false misses. */
+    private static final Set<String> NOISE = Set.of(
+            "mr", "mrs", "miss", "ms", "dr", "prof", "chief", "alhaji", "alhaja",
+            "engr", "barr", "pastor", "rev", "jr", "snr", "sr", "ii", "iii");
+
+    private NameMatcher() {
+    }
+
+    /**
+     * Whether {@code claimed} and {@code official} name the same person.
+     *
+     * <p>Requires at least two matching parts when both names have two or more,
+     * so a shared surname alone is never enough.
+     */
+    public static boolean matches(String claimed, String official) {
+        Set<String> a = parts(claimed);
+        Set<String> b = parts(official);
+        if (a.isEmpty() || b.isEmpty()) {
+            return false;
+        }
+
+        Set<String> shorter = a.size() <= b.size() ? a : b;
+        Set<String> longer = a.size() <= b.size() ? b : a;
+
+        long overlap = shorter.stream().filter(longer::contains).count();
+        if (overlap != shorter.size()) {
+            return false;
+        }
+        // One shared word is a coincidence — half of Lagos shares a surname.
+        return shorter.size() >= 2 || (a.size() == 1 && b.size() == 1);
+    }
+
+    /** How much of the shorter name appeared in the longer one, 0 to 1. */
+    public static double similarity(String claimed, String official) {
+        Set<String> a = parts(claimed);
+        Set<String> b = parts(official);
+        if (a.isEmpty() || b.isEmpty()) {
+            return 0;
+        }
+        Set<String> shorter = a.size() <= b.size() ? a : b;
+        Set<String> longer = a.size() <= b.size() ? b : a;
+        long overlap = shorter.stream().filter(longer::contains).count();
+        return (double) overlap / shorter.size();
+    }
+
+    /**
+     * The meaningful words of a name, lowercased, stripped of accents,
+     * hyphens, apostrophes and titles.
+     */
+    static Set<String> parts(String name) {
+        if (name == null || name.isBlank()) {
+            return Set.of();
+        }
+        String flattened = Normalizer.normalize(name, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z\\s]", " ");
+
+        return Arrays.stream(flattened.split("\\s+"))
+                .filter(part -> part.length() > 1)
+                .filter(part -> !NOISE.contains(part))
+                .collect(LinkedHashSet::new, Set::add, Set::addAll);
+    }
+}

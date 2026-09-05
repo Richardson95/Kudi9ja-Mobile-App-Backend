@@ -1,0 +1,42 @@
+# ── Build output ───────────────────────────────────────────────────────────
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+
+# ── Runtime data ───────────────────────────────────────────────────────────
+# Receipts are private customer documents, kept five years as part of the
+# transaction record and served only over signed, expiring URLs. They belong in
+# object storage, never in source control. The exports directory holds the same
+# kind of thing: a customer's whole record, generated on request.
+var/
+!var/.gitkeep
+
+# ── Secrets ────────────────────────────────────────────────────────────────
+# Nothing here should ever exist in the working tree, but a mistake costs more
+# than a line of configuration.
+*.pem
+*.key
+*.p12
+*-service-account.json
+firebase-service-account*.json
+.env
+.env.*
+!.env.example
+application-local.yml
+application-secret*.yml
+
+# ── Editors and OS ─────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.DS_Store
+Thumbs.db
+
+# ── Logs ───────────────────────────────────────────────────────────────────
+*.log
+logs/

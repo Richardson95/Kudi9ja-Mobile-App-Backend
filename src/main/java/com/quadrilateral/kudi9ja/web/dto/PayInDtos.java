@@ -1,0 +1,142 @@
+package com.quadrilateral.kudi9ja.web.dto;
+
+import com.quadrilateral.kudi9ja.domain.payin.DepositPurpose;
+import com.quadrilateral.kudi9ja.domain.payin.DepositStatus;
+import com.quadrilateral.kudi9ja.domain.payin.PayInClaim;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+/** Claiming a bank transfer, and what an admin sees of it. */
+public final class PayInDtos {
+
+    private PayInDtos() {
+    }
+
+    /**
+     * The reference to quote on the transfer, and where to send it.
+     *
+     * <p>A fresh reference is minted for every payment. Quoting one twice would
+     * make two transfers indistinguishable on a statement, which is the one
+     * thing the reference exists to prevent.
+     */
+    public record PaymentInstructionResponse(
+            String reference,
+            String bank,
+            String accountNumber,
+            String accountName,
+            BigDecimal minimumAmount,
+            String note) {
+    }
+
+    /**
+     * A claim. Sent as multipart, because the receipt is mandatory: a claim
+     * cannot be submitted without one.
+     */
+    public record ClaimRequest(
+            BigDecimal amount,
+            String reference,
+            DepositPurpose purpose,
+            UUID loanId,
+            String senderName,
+            String senderBank) {
+    }
+
+    public record ClaimResponse(
+            UUID id,
+            BigDecimal amount,
+            String reference,
+            DepositPurpose purpose,
+            String purposeLabel,
+            UUID loanId,
+            String loanPurpose,
+            String senderName,
+            String senderBank,
+            DepositStatus status,
+            String statusLabel,
+            Instant claimedAt,
+            Instant reviewedAt,
+            String reviewedBy,
+            String note,
+            boolean hasReceipt) {
+
+        public static ClaimResponse from(PayInClaim claim) {
+            return new ClaimResponse(
+                    claim.getId(),
+                    claim.getAmount(),
+                    claim.getReference(),
+                    claim.getPurpose(),
+                    claim.getPurpose().label(),
+                    claim.getLoanId(),
+                    claim.getLoanPurpose(),
+                    claim.getSenderName(),
+                    claim.getSenderBank(),
+                    claim.getStatus(),
+                    claim.getStatus().label(),
+                    claim.getClaimedAt(),
+                    claim.getReviewedAt(),
+                    claim.getReviewedBy(),
+                    claim.getNote(),
+                    claim.getReceiptKey() != null && !claim.getReceiptKey().isBlank());
+        }
+    }
+
+    /**
+     * The admin's view. Adds the customer, the age of the claim, and a signed
+     * URL for the receipt that expires.
+     */
+    public record AdminClaimResponse(
+            UUID id,
+            UUID userId,
+            String customerName,
+            String customerRef,
+            BigDecimal amount,
+            String reference,
+            DepositPurpose purpose,
+            String purposeLabel,
+            UUID loanId,
+            String loanPurpose,
+            String senderName,
+            String senderBank,
+            DepositStatus status,
+            String statusLabel,
+            Instant claimedAt,
+            long hoursWaiting,
+            Instant reviewedAt,
+            String reviewedBy,
+            String note,
+            String receiptUrl) {
+    }
+
+    /** Confirming or rejecting. A rejection has to say why. */
+    public record ReviewRequest(String note) {
+    }
+
+    /** Recording a credit that arrived without a usable narration. */
+    public record RecordUnmatchedRequest(
+            BigDecimal amount,
+            String narration,
+            String senderName,
+            String senderBank,
+            String senderAccount,
+            String bankReference,
+            Instant receivedAt) {
+    }
+
+    public record UnmatchedResponse(
+            UUID id,
+            BigDecimal amount,
+            String narration,
+            String senderName,
+            String senderBank,
+            String senderAccount,
+            String bankReference,
+            Instant receivedAt,
+            String status,
+            String statusLabel,
+            Instant returnDueAt,
+            long daysUntilReturnDue,
+            UUID matchedUserId,
+            String traceNotes) {
+    }
+}

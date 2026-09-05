@@ -1,0 +1,291 @@
+spring:
+  application:
+    name: kudi9ja-backend
+
+  autoconfigure:
+    exclude:
+      # There is no username-and-password login anywhere in this API — every
+      # call carries a bearer token. Left in, this auto-configuration prints a
+      # generated password on every boot and registers a user that can sign in
+      # with it, which is a real credential nobody meant to create.
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/kudi9ja}
+    username: ${DATABASE_USER:kudi9ja}
+    password: ${DATABASE_PASSWORD:kudi9ja}
+    hikari:
+      # A wallet debit takes the row under a write lock for the length of its
+      # transaction. A pool that is too small turns that into a queue; one that
+      # is far larger than the database can serve just moves the queue.
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      minimum-idle: 5
+      connection-timeout: 10000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema. Hibernate is only allowed to check that the
+      # mapping still matches it, never to change it — a process that can alter
+      # a live money schema on startup is a process that eventually will.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      # Receipts are photographs of a bank app. Generous enough for one taken
+      # on a modern phone, small enough that the endpoint is not a way to fill
+      # the disk.
+      max-file-size: 12MB
+      max-request-size: 16MB
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USER:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_AUTH:false}
+          starttls:
+            enable: ${MAIL_STARTTLS:false}
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: false
+
+server:
+  port: ${PORT:8080}
+  error:
+    # Errors go out in one shape, from the exception handler. Letting the
+    # container render its own would leak a stack trace and a second format.
+    whitelabel:
+      enabled: false
+  compression:
+    enabled: true
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health and info only. The rest of actuator describes the innards of a
+        # system that holds customer money.
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    mail:
+      # The health check opens an SMTP connection. A mail server that is slow or
+      # briefly unreachable would otherwise report the whole application as
+      # down, and a wallet that can be read and a wallet that can send email are
+      # not the same claim.
+      enabled: false
+  info:
+    env:
+      enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
+logging:
+  level:
+    root: INFO
+    com.quadrilateral.kudi9ja: ${LOG_LEVEL:INFO}
+    org.hibernate.SQL: WARN
+
+kudi9ja:
+  # Every contract, receipt and legal document names the company, not the
+  # product. Kudi9ja is what Quadrilateral Technologies Limited sells.
+  company:
+    legal-name: Quadrilateral Technologies Limited
+    rc-number: RC 1657731
+    product-name: Kudi9ja
+    registered-address: Lagos, Nigeria
+    support-email: support@kudi9ja.com
+    legal-email: legal@kudi9ja.com
+    privacy-email: privacy@kudi9ja.com
+    support-phone: +234 800 5834 952
+    whatsapp:
+      - +234 805 679 1426
+      - +234 803 630 0582
+
+  security:
+    # NEVER a literal in source. The Flutter client shipped one, which is now in
+    # public git history; this replaces it and must be rotated independently of
+    # any code release. The application refuses to start without it in any
+    # profile but dev.
+    pepper: ${KUDI9JA_PEPPER:}
+    argon-salt-length: 16
+    argon-hash-length: 32
+    argon-parallelism: 1
+    argon-memory-kb: 65536
+    argon-iterations: 3
+    # A floor the admin-settable value cannot go below.
+    max-passcode-attempts: 5
+    lockout-duration: PT30M
+    sign-in-throttle-window: PT15M
+    sign-in-attempts-per-window: 10
+
+  jwt:
+    secret: ${KUDI9JA_JWT_SECRET:}
+    issuer: kudi9ja
+    # Short, because the app locks itself after two idle minutes and there is
+    # nothing to be gained by a long-lived bearer token sitting on a phone.
+    access-token-ttl: PT15M
+    refresh-token-ttl: P30D
+    # Shorter still for a session that can see customer records.
+    admin-access-token-ttl: PT10M
+
+  storage:
+    receipt-directory: ${RECEIPT_DIR:./var/receipts}
+    export-directory: ${EXPORT_DIR:./var/exports}
+    signed-url-ttl: PT10M
+    max-receipt-bytes: 12582912
+    allowed-receipt-types:
+      - image/jpeg
+      - image/jpg
+      - image/png
+      - image/heic
+      - image/webp
+      - application/pdf
+
+  otp:
+    length: 6
+    ttl: PT10M
+    max-attempts: 5
+    max-per-hour: 6
+
+  bootstrap:
+    # Deliberate seeding. The client made the first account on a device the
+    # owner, which is a development affordance and not a way to run a company.
+    owner-email: ${KUDI9JA_OWNER_EMAIL:}
+    seed-legal-documents: true
+
+  jobs:
+    enabled: ${JOBS_ENABLED:true}
+    # In the Terms: money that cannot be tied to a customer goes back to source
+    # after thirty days.
+    unmatched-pay-in-return-days: 30
+    dormancy-months: 12
+    repayment-reminder-days: 3
+
+  compliance:
+    # NDPA 2023: a data subject request is answered within thirty days.
+    data-request-response-days: 30
+    # And the NDPC is told of a breach within seventy-two hours.
+    breach-notification-hours: 72
+    # AML: identity and transaction records for at least five years after the
+    # relationship ends. A deletion request cannot override this.
+    record-retention-years: 5
+    complaint-acknowledgement-hours: 24
+    complaint-investigation-working-days: 10
+    complaint-resolution-days: 30
+    change-notice-days: 30
+    # Collections contact happens between these hours, Lagos time, and never
+    # outside them. The server enforces it rather than trusting the clock in
+    # somebody's head.
+    collections-start-hour: 8
+    collections-end-hour: 20
+
+  # Which identity provider checks a BVN and an NIN, and which resolves a bank
+  # account name. Deliberately left empty here, so a deployment that has not
+  # chosen one refuses to start rather than quietly falling back to the
+  # sandbox: a simulated BVN check that always passes is worse than no check,
+  # because it looks like one.
+  kyc:
+    provider: ${KYC_PROVIDER:}
+
+  # How a notification reaches a phone that is not open. Empty means no push:
+  # notifications are still written and still appear when the app is opened.
+  # A deployment without Firebase works, it is just quieter.
+  push:
+    provider: ${PUSH_PROVIDER:}
+    service-account-file: ${FIREBASE_SERVICE_ACCOUNT:./var/firebase-service-account.json}
+    # The Android channel the app creates. Money notifications go to a
+    # high-importance channel so they are not silently collapsed.
+    android-channel-id: kudi9ja-money
+    # Handsets nobody has opened in this long are dropped from the register.
+    stale-device-days: 180
+
+  # Whether email actually leaves the building. Off sends nothing and logs the
+  # message instead, which is the right behaviour for a local run and the wrong
+  # one anywhere a customer is waiting for a code.
+  mail:
+    enabled: ${MAIL_ENABLED:true}
+
+  cors:
+    allowed-origins: ${CORS_ORIGINS:}
+
+---
+# Local development. Everything here is a convenience that must never reach a
+# deployment: an in-memory database, a mailer that logs instead of sending, and
+# secrets with defaults.
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:h2:mem:kudi9ja;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      # H2 is thrown away on every restart, so the schema is generated rather
+      # than migrated. The Postgres schema is Flyway's, always.
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  flyway:
+    enabled: false
+
+logging:
+  level:
+    com.quadrilateral.kudi9ja: DEBUG
+
+kudi9ja:
+  security:
+    pepper: dev-only-pepper-not-for-any-deployment
+  jwt:
+    secret: dev-only-jwt-secret-at-least-32-bytes-long-for-hs256
+  bootstrap:
+    owner-email: ${KUDI9JA_OWNER_EMAIL:owner@kudi9ja.com}
+  # Simulated. Passes every check after a short delay, exactly as the Flutter
+  # client did. Never outside this profile.
+  kyc:
+    provider: sandbox
+  mail:
+    enabled: false
+  # No Firebase project locally; the logging sender records what would go out.
+  push:
+    provider: ""
+  cors:
+    allowed-origins: http://localhost:*
