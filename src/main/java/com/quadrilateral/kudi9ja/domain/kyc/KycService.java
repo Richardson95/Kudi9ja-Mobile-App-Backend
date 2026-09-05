@@ -117,10 +117,11 @@ public class KycService {
                             : result.reason());
         }
 
-        // The sandbox says "whoever you asked about"; a real provider returns a
+        // The sandbox and the self-declared verifier both answer "whoever you
+        // asked about", because neither asked anyone. A real provider returns a
         // real name and the checks below run in full.
-        boolean sandboxAgrees = SandboxIdentityVerifier.SANDBOX_MATCHES_CALLER.equals(result.firstName());
-        if (sandboxAgrees) {
+        boolean takenOnTrust = SandboxIdentityVerifier.SANDBOX_MATCHES_CALLER.equals(result.firstName());
+        if (takenOnTrust) {
             return;
         }
 

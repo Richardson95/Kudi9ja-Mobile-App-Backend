@@ -212,10 +212,16 @@ kudi9ja:
     collections-end-hour: 20
 
   # Which identity provider checks a BVN and an NIN, and which resolves a bank
-  # account name. Deliberately left empty here, so a deployment that has not
-  # chosen one refuses to start rather than quietly falling back to the
-  # sandbox: a simulated BVN check that always passes is worse than no check,
-  # because it looks like one.
+  # account name.
+  #
+  #   dojah         — a licensed provider actually checks
+  #   self-declared — the customer's word is taken as given. A deliberate
+  #                   business choice: an account can be opened in somebody
+  #                   else's name, and the payout account is unverified.
+  #   sandbox       — local only; passes or fails on the final digit
+  #
+  # Empty refuses to start. A deployment that has not chosen must not quietly
+  # fall back to something that looks like a check and is not one.
   kyc:
     provider: ${KYC_PROVIDER:}
 
