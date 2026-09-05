@@ -1,0 +1,22 @@
+# Build output — the image builds its own.
+target/
+
+# Runtime data. Receipts are private customer documents; they belong in object
+# storage, never baked into an image.
+var/
+
+# Secrets. None of these should exist in the working tree, but an image is
+# copied and shipped, and a mistake here travels.
+*.pem
+*.key
+*.p12
+*-service-account.json
+.env
+.env.*
+
+.git/
+.github/
+.idea/
+.vscode/
+*.iml
+README.md
