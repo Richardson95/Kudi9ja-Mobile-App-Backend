@@ -108,6 +108,30 @@ public final class PayInDtos {
             String receiptUrl) {
     }
 
+    /**
+     * A reference the customer was handed, as the admin sees it.
+     *
+     * <p>This is what a bank narration is compared against. An admin looking at
+     * a receipt that says {@code K9-A1B2C3-7F4K} can see we issued exactly that,
+     * to this customer, at this time — and a narration matching nothing we ever
+     * issued is itself worth noticing.
+     */
+    public record IssuedReferenceResponse(
+            String reference,
+            Instant copiedAt,
+            boolean claimed,
+            UUID claimId) {
+
+        public static IssuedReferenceResponse from(
+                com.quadrilateral.kudi9ja.domain.payin.PaymentReference issued) {
+            return new IssuedReferenceResponse(
+                    issued.getReference(),
+                    issued.getCopiedAt(),
+                    issued.isClaimed(),
+                    issued.getClaimId());
+        }
+    }
+
     /** Confirming or rejecting. A rejection has to say why. */
     public record ReviewRequest(String note) {
     }

@@ -170,13 +170,19 @@ class CustomerJourneyTest {
         SignUpFlow.Session customer = flow.signUp(customerEmail);
         SignUpFlow.Session admin = owner();
 
-        JsonNode instruction = postJson("/api/v1/payins/reference", customer, null);
+        JsonNode instruction = getJson("/api/v1/payins/reference", customer);
         String reference = instruction.get("reference").asText();
-
-        // Every payment gets its own reference, not one per customer.
         assertThat(reference).startsWith("K9-").contains("-");
-        JsonNode second = postJson("/api/v1/payins/reference", customer, null);
-        assertThat(second.get("reference").asText()).isNotEqualTo(reference);
+
+        // Looking at the screen again shows the same reference. A customer who
+        // opened the page twice has not made two payments.
+        assertThat(getJson("/api/v1/payins/reference", customer).get("reference").asText())
+                .isEqualTo(reference);
+
+        // Copying it is what mints the next one — every payment gets its own,
+        // so two transfers of the same amount on the same day can be told apart.
+        JsonNode next = postJson("/api/v1/payins/reference/copied", customer, null);
+        assertThat(next.get("reference").asText()).isNotEqualTo(reference);
 
         JsonNode claim = submitClaim(customer, reference, "250000");
         assertThat(claim.get("status").asText()).isEqualTo("PENDING");

@@ -132,6 +132,27 @@ public class AdminCustomerController {
                 withdrawals::toAdminResponse);
     }
 
+    /**
+     * Every payment reference this customer has copied, newest first.
+     *
+     * <p>What an admin compares a bank narration against. A customer copies a
+     * reference, transfers with it, and uploads the receipt — this is the list
+     * that says we issued exactly that reference, to exactly this person, at
+     * exactly that time.
+     *
+     * <p>Also shows which have been claimed, so a reference that was taken away
+     * and never used stands out — and a narration matching nothing on this list
+     * is worth a second look before anything is credited.
+     */
+    @GetMapping("/{customerId}/references")
+    @Operation(summary = "Payment references this customer copied, to match against a receipt")
+    public List<PayInDtos.IssuedReferenceResponse> references(@PathVariable UUID customerId) {
+        customers.detail(customerId);
+        return payIns.copiedReferences(customerId).stream()
+                .map(PayInDtos.IssuedReferenceResponse::from)
+                .toList();
+    }
+
     @GetMapping("/{customerId}/plans")
     @Operation(summary = "A customer's savings plans")
     public List<SavingsDtos.PlanResponse> plans(@PathVariable UUID customerId) {

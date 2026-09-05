@@ -40,6 +40,16 @@ public final class Reference {
      * <p>Not one per customer, one per payment. Two transfers of the same
      * amount on the same day are otherwise impossible to tell apart on a
      * statement.
+     *
+     * <p>Fourteen characters. The first part is the customer's own reference,
+     * so an admin reading a bank statement can see whose payment it is without
+     * a lookup; the last four are random, from an alphabet with no
+     * {@code O}/{@code 0} or {@code I}/{@code 1} to confuse — somebody may be
+     * copying this by eye onto a banking app.
+     *
+     * <p>The dashes are for the human reading it. If a bank strips punctuation
+     * from the narration, {@code K9A1B2C37F4K} still matches by eye against the
+     * reference on file.
      */
     public static String paymentReference(String customerRef) {
         StringBuilder suffix = new StringBuilder(4);

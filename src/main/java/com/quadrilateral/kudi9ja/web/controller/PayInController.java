@@ -66,10 +66,36 @@ public class PayInController {
      * it is the same for everyone. It is not the customer's account, because
      * Kudi9ja issues none — which is exactly why the reference matters.
      */
+    @GetMapping("/reference")
+    @Operation(summary = "The reference currently on this customer's screen")
+    public PayInDtos.PaymentInstructionResponse reference() {
+        return payIns.activeReference(currentUser.requireId());
+    }
+
+    /**
+     * Called when the customer taps copy.
+     *
+     * <p>The copy is the event worth recording. Until then the reference is
+     * text on a screen; afterwards it is on its way into a bank narration, and
+     * an admin holding a statement needs to be able to find it — which is why
+     * it is written down here and shown on the customer's admin record.
+     *
+     * <p>Answers with the <b>next</b> reference, so the screen refreshes the
+     * moment the old one reaches the clipboard and the customer cannot reuse
+     * one reference for two payments by accident.
+     */
+    @PostMapping("/reference/copied")
+    @Operation(summary = "Record that the reference was copied, and mint the next one")
+    public PayInDtos.PaymentInstructionResponse referenceCopied() {
+        return payIns.markCopiedAndMintNext(currentUser.requireId());
+    }
+
+    /** Kept so an older build of the app still works. */
     @PostMapping("/reference")
-    @Operation(summary = "Mint a unique reference for a new payment")
+    @Operation(summary = "Deprecated — use GET /reference, then POST /reference/copied")
+    @Deprecated
     public PayInDtos.PaymentInstructionResponse mintReference() {
-        return payIns.mintReference(currentUser.requireId());
+        return payIns.activeReference(currentUser.requireId());
     }
 
     /**

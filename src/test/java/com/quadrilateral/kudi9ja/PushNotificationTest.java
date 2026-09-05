@@ -142,8 +142,18 @@ class PushNotificationTest {
                     "You finished \"New laptop\" and earned ₦12,000.",
                     new java.math.BigDecimal("12000"));
 
+            // Found by title rather than by position: the welcome notification
+            // from sign-up can share a timestamp with this one, and two rows
+            // with the same createdAt have no guaranteed order.
             JsonNode feed = getJson(customer, "/api/v1/notifications");
-            assertThat(feed.get("items").get(0).get("body").asText())
+            JsonNode bonus = null;
+            for (JsonNode item : feed.get("items")) {
+                if ("Bonus paid".equals(item.get("title").asText())) {
+                    bonus = item;
+                }
+            }
+            assertThat(bonus).as("the notification should be in the feed").isNotNull();
+            assertThat(bonus.get("body").asText())
                     .as("the app keeps the figure the lock screen withheld")
                     .contains("12,000");
         }

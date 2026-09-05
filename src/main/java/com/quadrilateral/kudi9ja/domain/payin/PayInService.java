@@ -56,6 +56,7 @@ public class PayInService {
     private static final Logger log = LoggerFactory.getLogger(PayInService.class);
 
     private final PayInClaimRepository claims;
+    private final PaymentReferenceRepository references;
     private final UnmatchedPayInRepository unmatched;
     private final UserRepository users;
     private final LoanRepository loans;
@@ -69,6 +70,7 @@ public class PayInService {
 
     public PayInService(
             PayInClaimRepository claims,
+            PaymentReferenceRepository references,
             UnmatchedPayInRepository unmatched,
             UserRepository users,
             LoanRepository loans,
@@ -80,6 +82,7 @@ public class PayInService {
             ReceiptStorage receipts,
             Kudi9jaProperties properties) {
         this.claims = claims;
+        this.references = references;
         this.unmatched = unmatched;
         this.users = users;
         this.loans = loans;
@@ -95,30 +98,84 @@ public class PayInService {
     // ── Mint a reference ───────────────────────────────────────────────────
 
     /**
-     * A reference unique to this payment, and where to send the money.
+     * The reference currently on the customer's screen.
      *
-     * <p>Retried until it is unique. The suffix is four characters from a
-     * 32-character alphabet, so a collision is rare, but "rare" is not
-     * "impossible" and two claims sharing a reference is exactly the confusion
-     * the reference exists to prevent.
+     * <p><b>Idempotent.</b> Opening the pay-in screen three times returns the
+     * same reference three times — a customer who looked at the screen has not
+     * made three payments, and three references on their record would be three
+     * things for an admin to rule out.
+     *
+     * <p>A new one is minted only when the last was copied, which is the moment
+     * a customer actually intends to pay.
      */
-    @Transactional(readOnly = true)
-    public PayInDtos.PaymentInstructionResponse mintReference(UUID userId) {
+    @Transactional
+    public PayInDtos.PaymentInstructionResponse activeReference(UUID userId) {
         settings.requireNotInMaintenance();
         PlatformSettings s = settings.currentReadOnly();
         User user = requireUser(userId);
 
-        String reference = null;
-        for (int attempt = 0; attempt < 12 && reference == null; attempt++) {
+        PaymentReference active = references.findFirstByUserIdAndCopiedAtIsNull(userId)
+                .orElseGet(() -> references.save(
+                        PaymentReference.issue(userId, mintUnique(user))));
+
+        return instruction(s, active.getReference(), false);
+    }
+
+    /**
+     * Records that the customer took the reference away, and mints the next.
+     *
+     * <p>The copy is the event worth writing down. Until then the reference is
+     * just text on a screen; afterwards it is on its way into a bank narration,
+     * and an admin holding a statement needs to be able to find it.
+     *
+     * <p>Returns the <b>new</b> reference, so the screen updates the moment the
+     * old one is on the clipboard. Two transfers of the same amount on the same
+     * day are otherwise impossible to tell apart.
+     */
+    @Transactional
+    public PayInDtos.PaymentInstructionResponse markCopiedAndMintNext(UUID userId) {
+        settings.requireNotInMaintenance();
+        PlatformSettings s = settings.currentReadOnly();
+        User user = requireUser(userId);
+
+        references.findFirstByUserIdAndCopiedAtIsNull(userId).ifPresent(active -> {
+            active.setCopiedAt(Instant.now());
+            references.save(active);
+        });
+
+        PaymentReference next = references.save(
+                PaymentReference.issue(userId, mintUnique(user)));
+
+        return instruction(s, next.getReference(), true);
+    }
+
+    /** Every reference this customer has taken away, newest first. */
+    @Transactional(readOnly = true)
+    public List<PaymentReference> copiedReferences(UUID userId) {
+        return references.findByUserIdAndCopiedAtIsNotNullOrderByCopiedAtDesc(userId);
+    }
+
+    /**
+     * Retried until unique.
+     *
+     * <p>The suffix is four characters from a 32-character alphabet, so a
+     * collision is rare — but "rare" is not "impossible", and two claims
+     * sharing a reference is exactly the confusion the reference exists to
+     * prevent.
+     */
+    private String mintUnique(User user) {
+        for (int attempt = 0; attempt < 12; attempt++) {
             String candidate = Reference.paymentReference(user.getCustomerRef());
-            if (!claims.existsByReference(candidate)) {
-                reference = candidate;
+            if (!claims.existsByReference(candidate) && !references.existsByReference(candidate)) {
+                return candidate;
             }
         }
-        if (reference == null) {
-            throw new ApiException(
-                    ErrorCode.INTERNAL, "We could not create a payment reference. Try again.");
-        }
+        throw new ApiException(
+                ErrorCode.INTERNAL, "We could not create a payment reference. Try again.");
+    }
+
+    private PayInDtos.PaymentInstructionResponse instruction(
+            PlatformSettings s, String reference, boolean freshlyMinted) {
 
         return new PayInDtos.PaymentInstructionResponse(
                 reference,
@@ -126,9 +183,13 @@ public class PayInService {
                 s.getCompanyAccountNumber(),
                 s.getCompanyAccountName(),
                 s.getMinDepositAmount(),
-                "Quote " + reference + " as the narration on your transfer, then come back and tell us "
-                        + "you have paid, with a screenshot of the receipt. This reference is for this "
-                        + "payment only — take a new one next time.");
+                freshlyMinted
+                        ? "Copied. Paste it as the narration on your transfer. This is a new "
+                                + "reference for your next payment — the one you just copied is "
+                                + "saved against your account."
+                        : "Quote " + reference + " as the narration on your transfer, then come "
+                                + "back and tell us you have paid, with a screenshot of the "
+                                + "receipt. This reference is for this payment only.");
     }
 
     // ── Claim ──────────────────────────────────────────────────────────────
@@ -221,6 +282,18 @@ public class PayInService {
         claim.setStatus(DepositStatus.PENDING);
 
         PayInClaim saved = claims.save(claim);
+
+        // Tie the claim back to the reference the customer was issued, so an
+        // admin comparing a bank narration can see it was one we handed out
+        // and not something typed from memory. A reference we never issued is
+        // itself worth noticing.
+        references.findByReference(reference).ifPresent(issued -> {
+            issued.setClaimId(saved.getId());
+            if (issued.getCopiedAt() == null) {
+                issued.setCopiedAt(Instant.now());
+            }
+            references.save(issued);
+        });
 
         notifications.push(
                 userId,
