@@ -77,7 +77,7 @@ public final class SavingsDtos {
             String pin) {
     }
 
-    public record PinOnlyRequest(
+    public record PlanPinRequest(
             @NotBlank(message = "Your PIN is needed.")
             String pin) {
     }

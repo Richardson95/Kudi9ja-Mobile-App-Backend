@@ -132,8 +132,17 @@ public final class PayInDtos {
         }
     }
 
-    /** Confirming or rejecting. A rejection has to say why. */
-    public record ReviewRequest(String note) {
+    /**
+     * Confirming or rejecting a claim. A rejection has to say why.
+     *
+     * <p>Named for the claim rather than just "review" because {@code SignupDtos}
+     * has a {@code ReviewRequest} of its own, for accepting the agreements. Two
+     * records with one name collide in the OpenAPI document — only one survives,
+     * and every endpoint taking the other is then documented with the wrong
+     * shape. Anyone generating a client from that spec builds something that
+     * cannot work, and finds out at runtime.
+     */
+    public record ClaimReviewRequest(String note) {
     }
 
     /** Recording a credit that arrived without a usable narration. */

@@ -49,7 +49,7 @@ public final class DataRightsDtos {
     public record DataExport(
             About about,
             Profile profile,
-            Wallet wallet,
+            WalletExport wallet,
             List<Transaction> transactions,
             List<SavingsPlan> savingsPlans,
             List<Loan> loans,
@@ -114,7 +114,7 @@ public final class DataRightsDtos {
             Instant retainUntil) {
     }
 
-    public record Wallet(
+    public record WalletExport(
             BigDecimal balance,
             long transactionCount,
             Instant openedAt,

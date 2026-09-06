@@ -114,7 +114,7 @@ public class AdminPayInController {
     @Operation(summary = "Confirm the payment and credit the wallet")
     public PayInDtos.AdminClaimResponse confirm(
             @PathVariable UUID claimId,
-            @RequestBody(required = false) PayInDtos.ReviewRequest request) {
+            @RequestBody(required = false) PayInDtos.ClaimReviewRequest request) {
 
         AdminUser actor = access.requireCanApprovePayments();
         PayInClaim claim = payIns.confirm(claimId, actorOf(actor), request == null ? null : request.note());
@@ -132,7 +132,7 @@ public class AdminPayInController {
     @Operation(summary = "Reject the claim. The reason is required and is sent to the customer.")
     public PayInDtos.AdminClaimResponse reject(
             @PathVariable UUID claimId,
-            @Valid @RequestBody PayInDtos.ReviewRequest request) {
+            @Valid @RequestBody PayInDtos.ClaimReviewRequest request) {
 
         AdminUser actor = access.requireCanApprovePayments();
         if (request == null || request.note() == null || request.note().isBlank()) {
@@ -178,7 +178,7 @@ public class AdminPayInController {
     public PayInDtos.UnmatchedResponse match(
             @PathVariable UUID unmatchedId,
             @RequestParam UUID customerId,
-            @RequestBody(required = false) PayInDtos.ReviewRequest request) {
+            @RequestBody(required = false) PayInDtos.ClaimReviewRequest request) {
 
         AdminUser actor = access.requireCanApprovePayments();
         return describe(payIns.matchToCustomer(
@@ -189,7 +189,7 @@ public class AdminPayInController {
     @Operation(summary = "Mark a held credit as returned to source")
     public PayInDtos.UnmatchedResponse markReturned(
             @PathVariable UUID unmatchedId,
-            @RequestBody(required = false) PayInDtos.ReviewRequest request) {
+            @RequestBody(required = false) PayInDtos.ClaimReviewRequest request) {
 
         AdminUser actor = access.requireCanApprovePayments();
         return describe(payIns.markReturned(
@@ -200,7 +200,7 @@ public class AdminPayInController {
     @Operation(summary = "Add a note about tracing a held credit")
     public PayInDtos.UnmatchedResponse addTraceNote(
             @PathVariable UUID unmatchedId,
-            @Valid @RequestBody PayInDtos.ReviewRequest request) {
+            @Valid @RequestBody PayInDtos.ClaimReviewRequest request) {
 
         AdminUser actor = access.requireCanView();
         return describe(payIns.addTraceNote(unmatchedId, actorOf(actor), request.note()));

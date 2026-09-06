@@ -181,7 +181,7 @@ public class LoanController {
     @Operation(summary = "Settle early. Part of the unearned interest is rebated.")
     public LoanDtos.RepaymentResponse settle(
             @PathVariable UUID loanId,
-            @Valid @RequestBody LoanDtos.PinOnlyRequest request,
+            @Valid @RequestBody LoanDtos.LoanPinRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
 
         UUID userId = currentUser.requireId();
@@ -207,7 +207,7 @@ public class LoanController {
     @Operation(summary = "Cancel inside the change-of-mind window. No interest is charged.")
     public LoanDtos.RepaymentResponse cancel(
             @PathVariable UUID loanId,
-            @Valid @RequestBody LoanDtos.PinOnlyRequest request,
+            @Valid @RequestBody LoanDtos.LoanPinRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
 
         UUID userId = currentUser.requireId();

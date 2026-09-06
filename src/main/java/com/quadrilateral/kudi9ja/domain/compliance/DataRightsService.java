@@ -273,8 +273,8 @@ public class DataRightsService {
                 user.getRetainUntil());
     }
 
-    private DataRightsDtos.Wallet walletOf(User user) {
-        return new DataRightsDtos.Wallet(
+    private DataRightsDtos.WalletExport walletOf(User user) {
+        return new DataRightsDtos.WalletExport(
                 ledger.balanceOf(user.getId()),
                 transactions.countByUserId(user.getId()),
                 user.getCreatedAt(),

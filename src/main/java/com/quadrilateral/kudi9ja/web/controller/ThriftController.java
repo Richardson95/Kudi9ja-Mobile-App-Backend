@@ -114,7 +114,7 @@ public class ThriftController {
     @Operation(summary = "Pay this round's contribution")
     public ThriftDtos.CircleResponse contribute(
             @PathVariable UUID circleId,
-            @Valid @RequestBody ThriftDtos.PinOnlyRequest request,
+            @Valid @RequestBody ThriftDtos.CirclePinRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
 
         UUID userId = currentUser.requireId();

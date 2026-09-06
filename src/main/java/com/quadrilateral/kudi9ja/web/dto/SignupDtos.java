@@ -92,7 +92,7 @@ public final class SignupDtos {
     }
 
     /** Step six. Set then confirmed, so both are sent and compared here. */
-    public record PasscodeRequest(
+    public record SetPasscodeRequest(
             @NotBlank @Pattern(regexp = "^\\d{6}$", message = "Your passcode is six digits.")
             String passcode,
 
@@ -101,7 +101,7 @@ public final class SignupDtos {
     }
 
     /** Step seven. */
-    public record PinRequest(
+    public record SetPinRequest(
             @NotBlank @Pattern(regexp = "^\\d{4}$", message = "Your PIN is four digits.")
             String pin,
 

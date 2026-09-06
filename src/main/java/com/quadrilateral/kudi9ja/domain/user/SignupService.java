@@ -251,7 +251,7 @@ public class SignupService {
     // ── Step 6: sign-in passcode ───────────────────────────────────────────
 
     @Transactional
-    public SignupDraft submitPasscode(UUID draftId, SignupDtos.PasscodeRequest request) {
+    public SignupDraft submitPasscode(UUID draftId, SignupDtos.SetPasscodeRequest request) {
         SignupDraft draft = require(draftId);
         requireAtLeast(draft, SignupStep.PASSWORD);
 
@@ -268,7 +268,7 @@ public class SignupService {
     // ── Step 7: transaction PIN ────────────────────────────────────────────
 
     @Transactional
-    public SignupDraft submitPin(UUID draftId, SignupDtos.PinRequest request) {
+    public SignupDraft submitPin(UUID draftId, SignupDtos.SetPinRequest request) {
         SignupDraft draft = require(draftId);
         requireAtLeast(draft, SignupStep.PASSCODE);
 

@@ -48,7 +48,7 @@ public final class LoanDtos {
             String pin) {
     }
 
-    public record PinOnlyRequest(
+    public record LoanPinRequest(
             @NotBlank(message = "Your PIN is needed.")
             String pin) {
     }

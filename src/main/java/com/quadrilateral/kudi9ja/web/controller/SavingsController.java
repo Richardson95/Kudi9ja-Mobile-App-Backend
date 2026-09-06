@@ -170,7 +170,7 @@ public class SavingsController {
     @Operation(summary = "Release a matured plan into the wallet")
     public SavingsDtos.ReleaseResponse withdraw(
             @PathVariable UUID planId,
-            @Valid @RequestBody SavingsDtos.PinOnlyRequest request,
+            @Valid @RequestBody SavingsDtos.PlanPinRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
 
         UUID userId = currentUser.requireId();
@@ -194,7 +194,7 @@ public class SavingsController {
     @Operation(summary = "Break a Target plan early. Principal returns in full; the bonus is forfeited.")
     public SavingsDtos.ReleaseResponse breakPlan(
             @PathVariable UUID planId,
-            @Valid @RequestBody SavingsDtos.PinOnlyRequest request,
+            @Valid @RequestBody SavingsDtos.PlanPinRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
 
         UUID userId = currentUser.requireId();

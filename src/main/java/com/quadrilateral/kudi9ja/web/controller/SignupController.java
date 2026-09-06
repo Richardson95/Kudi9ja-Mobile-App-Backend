@@ -130,7 +130,7 @@ public class SignupController {
     @Operation(summary = "Step 6 — the six-digit sign-in passcode")
     public SignupDtos.DraftResponse passcode(
             @PathVariable UUID draftId,
-            @Valid @RequestBody SignupDtos.PasscodeRequest request) {
+            @Valid @RequestBody SignupDtos.SetPasscodeRequest request) {
 
         return describe(signups.submitPasscode(draftId, request), "Passcode set.");
     }
@@ -139,7 +139,7 @@ public class SignupController {
     @Operation(summary = "Step 7 — the four-digit transaction PIN")
     public SignupDtos.DraftResponse pin(
             @PathVariable UUID draftId,
-            @Valid @RequestBody SignupDtos.PinRequest request) {
+            @Valid @RequestBody SignupDtos.SetPinRequest request) {
 
         return describe(signups.submitPin(draftId, request), "Transaction PIN set.");
     }

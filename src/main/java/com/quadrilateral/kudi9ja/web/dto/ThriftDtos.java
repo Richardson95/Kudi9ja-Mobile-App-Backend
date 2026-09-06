@@ -52,7 +52,7 @@ public final class ThriftDtos {
             String inviteCode) {
     }
 
-    public record PinOnlyRequest(
+    public record CirclePinRequest(
             @NotBlank(message = "Your PIN is needed.")
             String pin) {
     }
