@@ -76,11 +76,34 @@ public record Kudi9jaProperties(
      * transaction record.
      */
     public record Storage(
+            String provider,
             String receiptDirectory,
             String exportDirectory,
             Duration signedUrlTtl,
             long maxReceiptBytes,
-            List<String> allowedReceiptTypes) {
+            List<String> allowedReceiptTypes,
+            Cloudinary cloudinary) {
+    }
+
+    /**
+     * Cloudinary, when {@code kudi9ja.storage.provider} is {@code cloudinary}.
+     *
+     * <p>Used only as a place to keep bytes. Receipts are uploaded with
+     * {@code type=authenticated}, which means neither the original nor any
+     * derived version of it has a public URL — the only way to a receipt is
+     * still the admin endpoint, which checks the signature, checks that the
+     * caller holds panel access right now, and writes an audit entry.
+     *
+     * <p>This matters more than it sounds. A receipt is a photograph of a bank
+     * transfer: a customer's name, their account number and their balance. On
+     * the default upload type those would sit on a public CDN URL that needs no
+     * credential at all, and one leaked link would need no login to open.
+     */
+    public record Cloudinary(
+            String cloudName,
+            String apiKey,
+            String apiSecret,
+            String folder) {
     }
 
     /**

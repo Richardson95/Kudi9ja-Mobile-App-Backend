@@ -5,7 +5,8 @@ import com.quadrilateral.kudi9ja.domain.admin.AdminAccessService;
 import com.quadrilateral.kudi9ja.domain.admin.AdminUser;
 import com.quadrilateral.kudi9ja.domain.audit.AuditCategory;
 import com.quadrilateral.kudi9ja.domain.audit.AuditService;
-import com.quadrilateral.kudi9ja.integration.storage.LocalReceiptStorage;
+import com.quadrilateral.kudi9ja.integration.storage.ReceiptStorage;
+import com.quadrilateral.kudi9ja.integration.storage.ReceiptUrlSigner;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.InputStream;
@@ -54,13 +55,18 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Admin — receipts", description = "Serving receipts over signed, expiring URLs")
 public class AdminReceiptController {
 
-    private final LocalReceiptStorage storage;
+    private final ReceiptStorage storage;
+    private final ReceiptUrlSigner urlSigner;
     private final AdminAccessService access;
     private final AuditService audit;
 
     public AdminReceiptController(
-            LocalReceiptStorage storage, AdminAccessService access, AuditService audit) {
+            ReceiptStorage storage,
+            ReceiptUrlSigner urlSigner,
+            AdminAccessService access,
+            AuditService audit) {
         this.storage = storage;
+        this.urlSigner = urlSigner;
         this.access = access;
         this.audit = audit;
     }
@@ -81,7 +87,7 @@ public class AdminReceiptController {
             throw ApiException.notFound("That receipt");
         }
 
-        if (!storage.isSignatureValid(key, expires, signature)) {
+        if (!urlSigner.isSignatureValid(key, expires, signature)) {
             // One message for a forged signature and for an expired one. Telling
             // them apart would say whether the key exists, and the panel's own
             // recovery is the same either way: reopen the claim for a fresh URL.

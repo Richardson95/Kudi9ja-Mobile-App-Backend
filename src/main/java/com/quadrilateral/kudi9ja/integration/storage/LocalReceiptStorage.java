@@ -5,20 +5,15 @@ import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.config.Kudi9jaProperties;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.security.MessageDigest;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Base64;
 import java.util.Locale;
 import java.util.UUID;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -34,17 +29,18 @@ import org.springframework.stereotype.Component;
  * signature, checks that the caller is an admin, and writes an audit entry.
  */
 @Component
+@ConditionalOnProperty(
+        name = "kudi9ja.storage.provider", havingValue = "local", matchIfMissing = true)
 public class LocalReceiptStorage implements ReceiptStorage {
 
     private static final Logger log = LoggerFactory.getLogger(LocalReceiptStorage.class);
-    private static final String HMAC = "HmacSHA256";
 
     private final Path root;
-    private final byte[] signingKey;
+    private final ReceiptUrlSigner urlSigner;
 
-    public LocalReceiptStorage(Kudi9jaProperties properties) {
+    public LocalReceiptStorage(Kudi9jaProperties properties, ReceiptUrlSigner urlSigner) {
         this.root = Path.of(properties.storage().receiptDirectory()).toAbsolutePath().normalize();
-        this.signingKey = properties.security().pepper().getBytes(StandardCharsets.UTF_8);
+        this.urlSigner = urlSigner;
         try {
             Files.createDirectories(root);
         } catch (IOException e) {
@@ -73,28 +69,7 @@ public class LocalReceiptStorage implements ReceiptStorage {
 
     @Override
     public String signedUrl(String key, Duration ttl) {
-        long expiresAt = Instant.now().plus(ttl).getEpochSecond();
-        String signature = sign(key + "|" + expiresAt);
-        return "/api/v1/admin/receipts/" + Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(key.getBytes(StandardCharsets.UTF_8))
-                + "?expires=" + expiresAt + "&signature=" + signature;
-    }
-
-    /**
-     * Whether a signature is genuine and still inside its window.
-     *
-     * <p>Compared in constant time: a byte-by-byte comparison that stops at the
-     * first difference lets an attacker recover a valid signature one character
-     * at a time.
-     */
-    public boolean isSignatureValid(String key, long expiresAt, String signature) {
-        if (Instant.now().getEpochSecond() > expiresAt) {
-            return false;
-        }
-        String expected = sign(key + "|" + expiresAt);
-        return MessageDigest.isEqual(
-                expected.getBytes(StandardCharsets.UTF_8),
-                signature.getBytes(StandardCharsets.UTF_8));
+        return urlSigner.signedUrl(key, ttl);
     }
 
     @Override
@@ -137,17 +112,6 @@ public class LocalReceiptStorage implements ReceiptStorage {
             throw ApiException.forbidden("That is not a valid receipt.");
         }
         return target;
-    }
-
-    private String sign(String payload) {
-        try {
-            Mac mac = Mac.getInstance(HMAC);
-            mac.init(new SecretKeySpec(signingKey, HMAC));
-            return Base64.getUrlEncoder().withoutPadding()
-                    .encodeToString(mac.doFinal(payload.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception e) {
-            throw new IllegalStateException("Could not sign a receipt URL", e);
-        }
     }
 
     private static String sanitise(String value) {

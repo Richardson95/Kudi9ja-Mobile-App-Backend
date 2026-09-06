@@ -161,6 +161,11 @@ kudi9ja:
     admin-access-token-ttl: PT10M
 
   storage:
+    # local      — the filesystem. Correct for one machine and for tests, and
+    #              wrong on Render, whose disk is thrown away on every deploy:
+    #              receipts would vanish while the claims still pointed at them.
+    # cloudinary — object storage. Survives a deploy.
+    provider: ${RECEIPT_STORAGE:local}
     receipt-directory: ${RECEIPT_DIR:./var/receipts}
     export-directory: ${EXPORT_DIR:./var/exports}
     signed-url-ttl: PT10M
@@ -172,6 +177,14 @@ kudi9ja:
       - image/heic
       - image/webp
       - application/pdf
+
+    # Read only when provider is cloudinary. Uploads are authenticated-type, so
+    # nothing here is ever reachable without going through the admin endpoint.
+    cloudinary:
+      cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+      api-key: ${CLOUDINARY_API_KEY:}
+      api-secret: ${CLOUDINARY_API_SECRET:}
+      folder: ${CLOUDINARY_FOLDER:kudi9ja/receipts}
 
   otp:
     length: 6
