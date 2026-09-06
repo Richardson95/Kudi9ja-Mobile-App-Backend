@@ -2,6 +2,9 @@ package com.quadrilateral.kudi9ja.domain.notification;
 
 import com.quadrilateral.kudi9ja.common.error.ApiException;
 import com.quadrilateral.kudi9ja.config.Kudi9jaProperties;
+import com.quadrilateral.kudi9ja.domain.user.User;
+import com.quadrilateral.kudi9ja.domain.user.UserRepository;
+import com.quadrilateral.kudi9ja.integration.email.Mailer;
 import com.quadrilateral.kudi9ja.integration.push.PushSender;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -48,6 +51,8 @@ public class NotificationService {
     private final DeviceTokenRepository devices;
     private final NotificationPreferenceRepository preferences;
     private final PushSender push;
+    private final Mailer mailer;
+    private final UserRepository users;
     private final Kudi9jaProperties properties;
 
     public NotificationService(
@@ -55,11 +60,15 @@ public class NotificationService {
             DeviceTokenRepository devices,
             NotificationPreferenceRepository preferences,
             PushSender push,
+            Mailer mailer,
+            UserRepository users,
             Kudi9jaProperties properties) {
         this.repository = repository;
         this.devices = devices;
         this.preferences = preferences;
         this.push = push;
+        this.mailer = mailer;
+        this.users = users;
         this.properties = properties;
     }
 
@@ -109,6 +118,12 @@ public class NotificationService {
                 return;
             }
 
+            // Before the handset check below, and deliberately so. A borrower
+            // with no registered phone — the app uninstalled, notifications
+            // refused, a handset replaced — still owes the money, and is
+            // exactly the person a reminder has to reach.
+            emailIfWarranted(notification);
+
             List<String> tokens = devices.findByUserId(notification.getUserId()).stream()
                     .map(DeviceToken::getToken)
                     .toList();
@@ -137,6 +152,38 @@ public class NotificationService {
 
         } catch (RuntimeException e) {
             log.warn("Could not deliver a push notification to {}", notification.getUserId(), e);
+        }
+    }
+
+    /**
+     * Emails the few notifications that warrant it.
+     *
+     * <p>Never throws, and never blocks: the notification is already saved, the
+     * mailer is asynchronous, and a mail provider having a bad afternoon must
+     * not be able to fail the loan sweep that produced this.
+     *
+     * <p>Sent to the address on the account. An unverified one is still used —
+     * a customer who never confirmed their email is a customer who will not get
+     * a reminder otherwise, and a reminder sent to an address that bounces
+     * costs nothing.
+     */
+    private void emailIfWarranted(Notification notification) {
+        if (!notification.getKind().alsoEmail()) {
+            return;
+        }
+        try {
+            User user = users.findById(notification.getUserId()).orElse(null);
+            if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
+                return;
+            }
+            // The full body, not the lock-screen version. An inbox is not a
+            // screen a stranger reads over a shoulder in a queue, and a reminder
+            // that will not say the amount is not much of a reminder.
+            mailer.sendPlain(user.getEmail(), notification.getTitle(), notification.getBody());
+
+        } catch (RuntimeException e) {
+            log.warn("Could not email notification {} to {}",
+                    notification.getId(), notification.getUserId(), e);
         }
     }
 

@@ -54,6 +54,31 @@ public enum NotifyKind {
         this.optional = optional;
     }
 
+    /**
+     * Whether this also goes by email.
+     *
+     * <p>Deliberately almost never. Email is the channel a customer cannot turn
+     * off without missing something that matters, which makes it the one worth
+     * spending sparingly: a message about every auto-save and every interest
+     * payment trains people to ignore the sender, and the message that finally
+     * matters arrives in a folder nobody reads.
+     *
+     * <p>Two earn it.
+     *
+     * <p><b>A repayment falling due</b>, because it is the only notification
+     * with a deadline attached and a cost for missing it. Push reaches a phone
+     * that has the app installed, has been opened since the token last changed,
+     * and has notifications switched on at the operating system — a borrower
+     * can fail all three and still owe the money. Email reaches them anyway.
+     *
+     * <p><b>A security alert</b>, because the phone is exactly what an attacker
+     * has. Somebody who has taken over an account can silence push by signing
+     * out the customer's handset; they cannot silence the customer's inbox.
+     */
+    public boolean alsoEmail() {
+        return this == REPAYMENT_DUE || this == SECURITY;
+    }
+
     /** What this group is called on the customer's notification settings screen. */
     public String label() {
         return label;
