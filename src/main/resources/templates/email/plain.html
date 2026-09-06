@@ -21,8 +21,10 @@
             (<span th:text="${rcNumber}">RC 1657731</span>), Lagos, Nigeria.
           </p>
           <p style="margin:0; font-size:12px; line-height:1.55; color:#8a887e;">
-            <span th:text="${supportEmail}">support@kudi9ja.com</span> &middot;
-            <span th:text="${supportPhone}">+234 800 5834 952</span>
+            <span th:text="${supportEmail}">support@kudi9ja.com</span>
+            <span th:if="${supportPhone != null and !supportPhone.isEmpty()}">
+              &middot; <span th:text="${supportPhone}"></span>
+            </span>
           </p>
         </div>
       </td></tr>

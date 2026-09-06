@@ -128,7 +128,12 @@ kudi9ja:
     support-email: support@kudi9ja.com
     legal-email: legal@kudi9ja.com
     privacy-email: privacy@kudi9ja.com
-    support-phone: +234 800 5834 952
+    # Empty on purpose. The number that used to be here did not answer, and a
+    # published contact line that rings out is worse than none — a customer
+    # trying to report fraud spends their one good minute on it. Support is by
+    # email and WhatsApp, both of which are real. Set this again only when
+    # somebody is actually on the end of it.
+    support-phone: ${SUPPORT_PHONE:}
     whatsapp:
       - +234 805 679 1426
       - +234 803 630 0582
