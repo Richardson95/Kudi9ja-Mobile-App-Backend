@@ -4,10 +4,13 @@ import com.quadrilateral.kudi9ja.config.Kudi9jaProperties;
 import com.quadrilateral.kudi9ja.domain.audit.AuditCategory;
 import com.quadrilateral.kudi9ja.domain.audit.AuditService;
 import com.quadrilateral.kudi9ja.domain.user.User;
+import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import java.util.List;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,19 +36,59 @@ import org.springframework.transaction.annotation.Transactional;
  * until they need it.
  */
 @Service
-public class AdminBootstrapService {
+public class AdminBootstrapService implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AdminBootstrapService.class);
 
     private final AdminUserRepository admins;
+    private final UserRepository users;
     private final AuditService audit;
     private final Kudi9jaProperties properties;
 
     public AdminBootstrapService(
-            AdminUserRepository admins, AuditService audit, Kudi9jaProperties properties) {
+            AdminUserRepository admins,
+            UserRepository users,
+            AuditService audit,
+            Kudi9jaProperties properties) {
         this.admins = admins;
+        this.users = users;
         this.audit = audit;
         this.properties = properties;
+    }
+
+    /**
+     * Grants the panel to any named owner who already has an account.
+     *
+     * <p>The grant otherwise happens only as an account is opened, which leaves
+     * an obvious gap: somebody added to the list after they signed up never
+     * receives anything, and the only remedy is deleting a real account and
+     * making it again. Running this at startup closes that.
+     *
+     * <p>Safe to run on every boot. It grants what is missing and does nothing
+     * else — an owner who was later suspended or demoted through the panel is a
+     * deliberate decision by a person, and a restart must not quietly undo it.
+     */
+    @Override
+    @Transactional
+    public void run(ApplicationArguments args) {
+        List<String> configured = properties.bootstrap().ownerEmails();
+        if (configured == null) {
+            return;
+        }
+        for (String email : configured) {
+            if (email == null || email.isBlank()) {
+                continue;
+            }
+            String address = email.trim();
+            if (admins.existsByEmailIgnoreCase(address)) {
+                continue;
+            }
+            users.findByEmailIgnoreCase(address).ifPresent(user -> {
+                grant(user, "System (named owner, granted at startup)");
+                log.info("Granted owner access to {}, who already had an account",
+                        com.quadrilateral.kudi9ja.common.util.Masks.email(address));
+            });
+        }
     }
 
     /** Grants owner access if this account is one configuration names. */
@@ -58,21 +101,25 @@ public class AdminBootstrapService {
             return;
         }
 
-        AdminUser owner = AdminUser.grant(
+        grant(user, "System (bootstrap owner from deployment configuration)");
+        log.info("Granted bootstrap owner access to {}",
+                com.quadrilateral.kudi9ja.common.util.Masks.email(user.getEmail()));
+    }
+
+    private void grant(User user, String by) {
+        admins.save(AdminUser.grant(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
                 user.getPhone(),
                 AdminRole.OWNER,
-                "System (bootstrap owner from deployment configuration)");
-        admins.save(owner);
+                by));
 
         audit.recordSystem(
                 AuditCategory.TEAM,
                 "Owner provisioned",
-                user.getFullName() + " (" + user.getEmail() + ") was granted owner access as the "
-                        + "bootstrap owner named in deployment configuration.");
-        log.info("Granted bootstrap owner access to {}", user.getEmail());
+                user.getFullName() + " (" + user.getEmail() + ") was granted owner access as an "
+                        + "owner named in deployment configuration.");
     }
 
     /** Whether deployment configuration names this address as an owner. */
