@@ -33,14 +33,17 @@ public class LegalSeeder implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(LegalSeeder.class);
 
     private final LegalDocumentRepository documents;
+    private final LegalAcceptanceRepository acceptances;
     private final ObjectMapper objectMapper;
     private final Kudi9jaProperties properties;
 
     public LegalSeeder(
             LegalDocumentRepository documents,
+            LegalAcceptanceRepository acceptances,
             ObjectMapper objectMapper,
             Kudi9jaProperties properties) {
         this.documents = documents;
+        this.acceptances = acceptances;
         this.objectMapper = objectMapper;
         this.properties = properties;
     }
@@ -57,9 +60,29 @@ public class LegalSeeder implements ApplicationRunner {
     }
 
     private void seed(LegalDocumentKind kind, String version) {
-        if (documents.existsByKindAndVersion(kind, version)) {
-            return;
+        // A published document is frozen the moment somebody agrees to it.
+        //
+        // Before that it is a draft that happens to live in a database, and
+        // editing the file should update what is served — otherwise a typo, a
+        // wrong address or a phone number that does not answer is stuck in
+        // production until somebody remembers to bump a version, which is
+        // exactly how a document ends up publishing something untrue.
+        //
+        // After that it is a record of what a person agreed to, and rewriting
+        // it would make the acceptance a lie. So the count of acceptances is
+        // what decides, not a flag anyone can forget to set: nobody has agreed
+        // to it, refresh it; somebody has, leave it alone and publish a new
+        // version instead.
+        LegalDocument existing = documents.findByKindAndVersion(kind, version).orElse(null);
+        if (existing != null) {
+            long accepted = acceptances.countByDocumentId(existing.getId());
+            if (accepted > 0) {
+                return;
+            }
+            log.info("{} version {} has not been accepted by anyone; refreshing it from the "
+                    + "shipped file", kind.defaultTitle(), version);
         }
+
         String path = "legal/" + kind.id() + "-" + version + ".json";
         ClassPathResource resource = new ClassPathResource(path);
         if (!resource.exists()) {
@@ -71,8 +94,10 @@ public class LegalSeeder implements ApplicationRunner {
         try (InputStream in = resource.getInputStream()) {
             JsonNode root = objectMapper.readTree(new String(in.readAllBytes(), StandardCharsets.UTF_8));
 
-            LegalDocument document = new LegalDocument();
-            document.setId(UUID.randomUUID());
+            LegalDocument document = existing == null ? new LegalDocument() : existing;
+            if (existing == null) {
+                document.setId(UUID.randomUUID());
+            }
             document.setKind(kind);
             document.setVersion(root.path("version").asText(version));
             document.setTitle(root.path("title").asText(kind.defaultTitle()));
@@ -83,10 +108,13 @@ public class LegalSeeder implements ApplicationRunner {
             document.setEffectiveFrom(parseEffective(root.path("effective").asText(null)));
             document.setPublishedAt(Instant.now());
             document.setPublishedBy("System (shipped with the app)");
-            document.setChangeSummary("First published version.");
+            document.setChangeSummary(existing == null
+                    ? "First published version."
+                    : "Refreshed from the shipped file before anyone had accepted it.");
 
             documents.save(document);
-            log.info("Seeded {} version {} ({} sections)",
+            log.info("{} {} version {} ({} sections)",
+                    existing == null ? "Seeded" : "Refreshed",
                     kind.defaultTitle(), document.getVersion(), root.path("sections").size());
         } catch (Exception e) {
             throw new IllegalStateException("Could not seed the " + kind.defaultTitle() + " from " + path, e);
