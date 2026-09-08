@@ -4,6 +4,7 @@ import com.quadrilateral.kudi9ja.config.Kudi9jaProperties;
 import com.quadrilateral.kudi9ja.domain.audit.AuditCategory;
 import com.quadrilateral.kudi9ja.domain.audit.AuditService;
 import com.quadrilateral.kudi9ja.domain.user.User;
+import java.util.List;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,10 +18,19 @@ import org.springframework.transaction.annotation.Transactional;
  * development affordance and is not defensible on a server, where the first
  * account is whoever signs up first — a stranger.
  *
- * <p>So the first owner is <b>named in deployment configuration</b>. When an
- * account is opened with that email, and only then, the owner grant is created.
- * If the configuration names nobody, no owner is ever created automatically and
- * the panel has to be seeded deliberately by an operator.
+ * <p>So the owners are <b>named in deployment configuration</b>. When an
+ * account is opened with one of those emails, and only then, the owner grant is
+ * created. If the configuration names nobody, no owner is ever created
+ * automatically and the panel has to be seeded deliberately by an operator.
+ *
+ * <p>More than one may be named, because a product with a single owner has a
+ * single point of failure: one person loses their phone and nobody can reach
+ * the panel to grant access to anybody else.
+ *
+ * <p>Each named email is granted independently. There is deliberately no "only
+ * if there is no owner yet" rule — that would silently mean the second name in
+ * the list never receives anything, which is the sort of failure nobody notices
+ * until they need it.
  */
 @Service
 public class AdminBootstrapService {
@@ -38,23 +48,10 @@ public class AdminBootstrapService {
         this.properties = properties;
     }
 
-    /**
-     * Grants owner access if this account is the one configuration names, and
-     * there is no owner yet.
-     */
+    /** Grants owner access if this account is one configuration names. */
     @Transactional
     public void grantSeededOwnerIfMatching(User user) {
-        String configured = properties.bootstrap().ownerEmail();
-        if (configured == null || configured.isBlank()) {
-            return;
-        }
-        if (!configured.trim().toLowerCase(Locale.ROOT)
-                .equals(user.getEmail().toLowerCase(Locale.ROOT))) {
-            return;
-        }
-        if (admins.countByRoleAndActiveTrue(AdminRole.OWNER) > 0) {
-            log.warn("An owner already exists, so the configured bootstrap owner {} was not granted access.",
-                    com.quadrilateral.kudi9ja.common.util.Masks.email(configured));
+        if (!isNamedOwner(user.getEmail())) {
             return;
         }
         if (admins.existsByEmailIgnoreCase(user.getEmail())) {
@@ -76,5 +73,18 @@ public class AdminBootstrapService {
                 user.getFullName() + " (" + user.getEmail() + ") was granted owner access as the "
                         + "bootstrap owner named in deployment configuration.");
         log.info("Granted bootstrap owner access to {}", user.getEmail());
+    }
+
+    /** Whether deployment configuration names this address as an owner. */
+    private boolean isNamedOwner(String email) {
+        List<String> configured = properties.bootstrap().ownerEmails();
+        if (configured == null || configured.isEmpty() || email == null) {
+            return false;
+        }
+        String wanted = email.trim().toLowerCase(Locale.ROOT);
+        return configured.stream()
+                .filter(e -> e != null && !e.isBlank())
+                .map(e -> e.trim().toLowerCase(Locale.ROOT))
+                .anyMatch(wanted::equals);
     }
 }

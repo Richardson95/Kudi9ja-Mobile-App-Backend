@@ -136,7 +136,7 @@ public record Kudi9jaProperties(
      * owner; a server needs the first owner named in configuration instead.
      */
     public record Bootstrap(
-            String ownerEmail,
+            List<String> ownerEmails,
             boolean seedLegalDocuments) {
     }
 

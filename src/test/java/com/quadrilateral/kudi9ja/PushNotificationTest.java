@@ -48,7 +48,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @Import({CapturingMailer.Config.class, RecordingPushSender.Config.class})
 @TestPropertySource(properties = {
         "kudi9ja.jobs.enabled=false",
-        "kudi9ja.bootstrap.owner-email=owner@kudi9ja.test"
+        "kudi9ja.bootstrap.owner-emails=owner@kudi9ja.test"
 })
 @DisplayName("Push notifications")
 class PushNotificationTest {

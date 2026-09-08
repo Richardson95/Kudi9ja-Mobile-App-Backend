@@ -214,7 +214,10 @@ kudi9ja:
   bootstrap:
     # Deliberate seeding. The client made the first account on a device the
     # owner, which is a development affordance and not a way to run a company.
-    owner-email: ${KUDI9JA_OWNER_EMAIL:}
+    # The people who become owners when they open an account. Comma
+    # separated. Empty means no owner is ever created automatically and the
+    # panel has to be seeded by hand.
+    owner-emails: ${KUDI9JA_OWNER_EMAILS:${KUDI9JA_OWNER_EMAIL:}}
     seed-legal-documents: true
 
   jobs:
@@ -321,7 +324,7 @@ kudi9ja:
   jwt:
     secret: dev-only-jwt-secret-at-least-32-bytes-long-for-hs256
   bootstrap:
-    owner-email: ${KUDI9JA_OWNER_EMAIL:owner@kudi9ja.com}
+    owner-emails: ${KUDI9JA_OWNER_EMAILS:${KUDI9JA_OWNER_EMAIL:owner@kudi9ja.com}}
   # Simulated. Passes every check after a short delay, exactly as the Flutter
   # client did. Never outside this profile.
   kyc:
