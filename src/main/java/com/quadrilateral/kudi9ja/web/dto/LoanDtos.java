@@ -33,7 +33,7 @@ public final class LoanDtos {
             Integer months,
 
             @NotBlank(message = "What is the loan for?")
-            @Size(max = 200)
+            @Size(max = 200, message = "Keep the purpose under 200 characters.")
             String purpose,
 
             @NotBlank(message = "Your PIN is needed.")

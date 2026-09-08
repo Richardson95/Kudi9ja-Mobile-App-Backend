@@ -28,7 +28,7 @@ public final class SavingsDtos {
      */
     public record CreateFixedRequest(
             @NotBlank(message = "Give the plan a name.")
-            @Size(max = 120)
+            @Size(max = 120, message = "Keep the plan name under 120 characters.")
             String title,
 
             @NotNull(message = "How much are you locking away?")
@@ -48,7 +48,7 @@ public final class SavingsDtos {
     /** Opening a Target plan. */
     public record CreateTargetRequest(
             @NotBlank(message = "Give the plan a name.")
-            @Size(max = 120)
+            @Size(max = 120, message = "Keep the plan name under 120 characters.")
             String title,
 
             @NotNull(message = "What are you saving towards?")

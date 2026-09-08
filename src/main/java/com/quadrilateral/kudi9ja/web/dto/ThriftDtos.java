@@ -28,7 +28,7 @@ public final class ThriftDtos {
      */
     public record CreateCircleRequest(
             @NotBlank(message = "Give the circle a name.")
-            @Size(max = 120)
+            @Size(max = 120, message = "Keep the circle name under 120 characters.")
             String name,
 
             @NotNull(message = "How much does each member pay per round?")

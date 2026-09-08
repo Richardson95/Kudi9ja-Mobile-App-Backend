@@ -308,7 +308,7 @@ public final class DataRightsDtos {
             @NotBlank(message = "Your password is needed to close your account.")
             String password,
 
-            @Size(max = 500)
+            @Size(max = 500, message = "Keep the reason under 500 characters.")
             String reason) {
     }
 

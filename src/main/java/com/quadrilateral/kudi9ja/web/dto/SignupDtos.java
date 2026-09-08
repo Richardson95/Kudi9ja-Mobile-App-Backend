@@ -27,12 +27,12 @@ public final class SignupDtos {
     /** Step one. The date of birth is checked for eighteen years by the service. */
     public record PersonalRequest(
             @NotBlank(message = "Tell us your full name.")
-            @Size(min = 2, max = 160)
+            @Size(min = 2, max = 160, message = "Your full name is between 2 and 160 characters.")
             String fullName,
 
             @NotBlank(message = "An email address is needed.")
             @Email(message = "That does not look like an email address.")
-            @Size(max = 190)
+            @Size(max = 190, message = "That email address is too long.")
             String email,
 
             @NotBlank(message = "A phone number is needed.")
@@ -59,7 +59,7 @@ public final class SignupDtos {
             String nin,
 
             @NotBlank(message = "Your address is needed.")
-            @Size(min = 5, max = 400)
+            @Size(min = 5, max = 400, message = "Give your street, area and city.")
             String address,
 
             @NotBlank(message = "Choose your state.")
@@ -79,15 +79,15 @@ public final class SignupDtos {
     /** Step five. */
     public record PasswordRequest(
             @NotBlank(message = "Choose a password.")
-            @Size(min = 8, max = 128)
+            @Size(min = 8, max = 128, message = "Your password is at least 8 characters.")
             String password,
 
             @NotBlank(message = "Choose a security question.")
-            @Size(max = 200)
+            @Size(max = 200, message = "That security question is too long.")
             String securityQuestion,
 
             @NotBlank(message = "Answer your security question.")
-            @Size(min = 2, max = 200)
+            @Size(min = 2, max = 200, message = "Give a fuller answer.")
             String securityAnswer) {
     }
 

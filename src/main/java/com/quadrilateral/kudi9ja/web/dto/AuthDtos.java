@@ -68,7 +68,7 @@ public final class AuthDtos {
             @NotBlank(message = "Your current password is needed.")
             String currentPassword,
 
-            @NotBlank @Size(min = 8, max = 128)
+            @NotBlank @Size(min = 8, max = 128, message = "Your password is at least 8 characters.")
             String newPassword) {
     }
 
@@ -80,7 +80,7 @@ public final class AuthDtos {
     public record ResetPasswordRequest(
             @NotBlank @Email String email,
             @NotBlank String code,
-            @NotBlank @Size(min = 8, max = 128) String newPassword) {
+            @NotBlank @Size(min = 8, max = 128, message = "Your password is at least 8 characters.") String newPassword) {
     }
 
     public record OtpSendRequest(

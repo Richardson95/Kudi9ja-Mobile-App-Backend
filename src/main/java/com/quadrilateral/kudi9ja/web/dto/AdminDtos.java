@@ -45,7 +45,7 @@ public final class AdminDtos {
     public record GrantAccessRequest(
             @NotBlank(message = "Enter the email address of the person you are giving access to.")
             @Email(message = "That is not a valid email address.")
-            @Size(max = 190)
+            @Size(max = 190, message = "That email address is too long.")
             String email,
 
             @NotNull(message = "Choose a role.")
@@ -63,7 +63,7 @@ public final class AdminDtos {
             @NotNull
             Boolean active,
 
-            @Size(max = 300)
+            @Size(max = 300, message = "Keep the reason under 300 characters.")
             String reason) {
     }
 
@@ -239,13 +239,13 @@ public final class AdminDtos {
             AccountStatus status,
 
             @NotBlank(message = "Say why.")
-            @Size(max = 500)
+            @Size(max = 500, message = "Keep it under 500 characters.")
             String reason) {
     }
 
     public record FlagCustomerRequest(
             @NotBlank(message = "Say why this customer is being flagged.")
-            @Size(max = 500)
+            @Size(max = 500, message = "Keep it under 500 characters.")
             String reason) {
     }
 
@@ -334,7 +334,7 @@ public final class AdminDtos {
      */
     public record WriteOffRequest(
             @NotBlank(message = "Say why this loan is being written off.")
-            @Size(max = 500)
+            @Size(max = 500, message = "Keep it under 500 characters.")
             String reason) {
     }
 
@@ -345,7 +345,7 @@ public final class AdminDtos {
      * refused outside 8am–8pm, because the same document commits to that too.
      */
     public record RemindRequest(
-            @Size(max = 500)
+            @Size(max = 500, message = "Keep it under 500 characters.")
             String note) {
     }
 

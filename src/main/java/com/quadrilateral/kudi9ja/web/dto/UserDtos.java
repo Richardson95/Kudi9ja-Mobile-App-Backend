@@ -106,7 +106,7 @@ public final class UserDtos {
                     message = "A Nigerian mobile number is eleven digits.")
             String phone,
 
-            @Size(max = 400)
+            @Size(max = 400, message = "That address is too long.")
             String address,
 
             String state,
