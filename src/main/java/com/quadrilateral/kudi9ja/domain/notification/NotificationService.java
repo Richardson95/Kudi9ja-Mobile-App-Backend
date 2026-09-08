@@ -16,8 +16,11 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +58,18 @@ public class NotificationService {
     private final UserRepository users;
     private final Kudi9jaProperties properties;
 
+    /**
+     * This service, through its proxy.
+     *
+     * <p>{@link #deliverAfterCommit} has to call {@link #deliver} the long way
+     * round. A plain {@code deliver(...)} is a call on {@code this}, which goes
+     * nowhere near the proxy — so neither {@code @Async} nor the {@code
+     * REQUIRES_NEW} would have any effect and the delivery would quietly run on
+     * the caller's thread, which is the thing being fixed.
+     */
+    private final NotificationService self;
+
+    @Autowired
     public NotificationService(
             NotificationRepository repository,
             DeviceTokenRepository devices,
@@ -62,7 +77,9 @@ public class NotificationService {
             PushSender push,
             Mailer mailer,
             UserRepository users,
-            Kudi9jaProperties properties) {
+            Kudi9jaProperties properties,
+            @Lazy NotificationService self) {
+        this.self = self;
         this.repository = repository;
         this.devices = devices;
         this.preferences = preferences;
@@ -90,16 +107,22 @@ public class NotificationService {
      * <p>If the transaction rolls back the callback never runs, so a customer is
      * never buzzed about money that did not move. Outside a transaction — a
      * scheduled job, say — it sends immediately.
+     *
+     * <p>Either way the send happens on another thread. {@code afterCommit}
+     * runs on the request thread, so a slow provider used to be paid for by the
+     * customer waiting on the screen: the money had moved and the row was
+     * written, and they were still looking at a spinner because a push had not
+     * come back. The worst a stalled provider can now cost is a notification.
      */
     private void deliverAfterCommit(Notification notification) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            deliver(notification);
+            self.deliver(notification);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                deliver(notification);
+                self.deliver(notification);
             }
         });
     }
@@ -111,6 +134,7 @@ public class NotificationService {
      * outcome of a failure is that the customer reads it the next time they
      * open the app.
      */
+    @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deliver(Notification notification) {
         try {

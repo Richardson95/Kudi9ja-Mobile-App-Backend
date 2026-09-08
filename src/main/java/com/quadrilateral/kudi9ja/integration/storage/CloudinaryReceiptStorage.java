@@ -25,6 +25,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
@@ -81,6 +82,33 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
      */
     private static final Duration DOWNLOAD_WINDOW = Duration.ofMinutes(2);
 
+    /**
+     * How long we are willing to wait on Cloudinary, and why there is a bound
+     * at all.
+     *
+     * <p>The upload happens inside the customer's request, before the claim is
+     * saved. Left untimed — which is the default, and what this was — a stalled
+     * connection holds the request thread for ever: the phone gives up after a
+     * minute and tells the customer their connection failed, while the thread
+     * stays parked. Enough of those and the pool is gone and the whole service
+     * is unreachable, for one slow upstream.
+     *
+     * <p>Read is the generous one: a receipt is a photograph on a mobile
+     * uplink and Cloudinary is not always quick. It is still well inside the
+     * phone's own 60-second timeout, so the customer gets a real error they can
+     * act on rather than silence.
+     */
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(30);
+
+    private static SimpleClientHttpRequestFactory timeoutFactory() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(CONNECT_TIMEOUT);
+        factory.setReadTimeout(READ_TIMEOUT);
+        return factory;
+    }
+
     private final Kudi9jaProperties.Cloudinary config;
     private final ReceiptUrlSigner urlSigner;
     private final RestClient http;
@@ -88,7 +116,7 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
     public CloudinaryReceiptStorage(Kudi9jaProperties properties, ReceiptUrlSigner urlSigner) {
         this.config = properties.storage().cloudinary();
         this.urlSigner = urlSigner;
-        this.http = RestClient.builder().build();
+        this.http = RestClient.builder().requestFactory(timeoutFactory()).build();
 
         if (isBlank(config.cloudName()) || isBlank(config.apiKey()) || isBlank(config.apiSecret())) {
             throw new IllegalStateException(

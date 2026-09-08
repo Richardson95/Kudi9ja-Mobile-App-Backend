@@ -10,6 +10,7 @@ import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -20,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -50,7 +52,17 @@ public class FirebasePushSender implements PushSender {
     /** Beyond this a customer has a token-hygiene problem, not a delivery one. */
     private static final int MAX_DEVICES_PER_NOTIFICATION = 12;
 
-    private final RestClient http = RestClient.create();
+    /**
+     * Short, because nothing here is worth waiting for. The notification is
+     * already in the database and the customer will read it when they open the
+     * app; a push that has not left in five seconds has failed. Untimed — the
+     * default — twelve stalled sends would hold a thread for ever.
+     */
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
+
+    private final RestClient http = RestClient.builder().requestFactory(timeoutFactory()).build();
     private final ObjectMapper json = new ObjectMapper();
     private final Kudi9jaProperties properties;
 
@@ -61,6 +73,13 @@ public class FirebasePushSender implements PushSender {
     /** Access tokens last an hour; this avoids minting one per notification. */
     private volatile String cachedAccessToken;
     private volatile Instant cachedUntil = Instant.EPOCH;
+
+    private static SimpleClientHttpRequestFactory timeoutFactory() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(CONNECT_TIMEOUT);
+        factory.setReadTimeout(READ_TIMEOUT);
+        return factory;
+    }
 
     public FirebasePushSender(Kudi9jaProperties properties) {
         this.properties = properties;

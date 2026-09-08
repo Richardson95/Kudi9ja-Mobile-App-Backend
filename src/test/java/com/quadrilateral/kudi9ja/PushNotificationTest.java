@@ -15,6 +15,7 @@ import com.quadrilateral.kudi9ja.domain.notification.DeviceTokenRepository;
 import com.quadrilateral.kudi9ja.domain.notification.NotificationService;
 import com.quadrilateral.kudi9ja.domain.notification.NotifyKind;
 import com.quadrilateral.kudi9ja.support.CapturingMailer;
+import com.quadrilateral.kudi9ja.support.InlineAsync;
 import com.quadrilateral.kudi9ja.support.RecordingPushSender;
 import com.quadrilateral.kudi9ja.support.SignUpFlow;
 import java.util.Map;
@@ -45,7 +46,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
-@Import({CapturingMailer.Config.class, RecordingPushSender.Config.class})
+@Import({CapturingMailer.Config.class, RecordingPushSender.Config.class, InlineAsync.Config.class})
 @TestPropertySource(properties = {
         "kudi9ja.jobs.enabled=false",
         "kudi9ja.bootstrap.owner-emails=owner@kudi9ja.test"
