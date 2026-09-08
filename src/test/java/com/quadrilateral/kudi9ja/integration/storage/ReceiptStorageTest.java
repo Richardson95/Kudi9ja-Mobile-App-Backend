@@ -2,8 +2,11 @@ package com.quadrilateral.kudi9ja.integration.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.core.io.Resource;
+import org.springframework.util.MultiValueMap;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -131,6 +134,45 @@ class ReceiptStorageTest {
             assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.webp")).isEqualTo("image");
             assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.pdf")).isEqualTo("image");
             assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.heic")).isEqualTo("raw");
+        }
+
+        /**
+         * The upload body is built with plain Spring types, and this test
+         * exists to keep it that way.
+         *
+         * <p>It was built with {@code MultipartBodyBuilder}, which is the
+         * obvious choice and belongs to Spring's reactive story: touching it
+         * loads {@code org.reactivestreams.Publisher}, which a Web MVC service
+         * does not have. Nothing failed at build time or at startup — the class
+         * is only resolved the first time it is used, so the service came up
+         * healthy and then threw {@code NoClassDefFoundError} at the first
+         * customer to attach a receipt.
+         *
+         * <p>Calling it here is the whole guard: this suite runs on the same
+         * classpath as the service, so anything that reaches for a dependency
+         * we do not ship fails here rather than in somebody's hands.
+         */
+        @Test
+        @DisplayName("the upload body needs nothing that is not on the classpath")
+        void uploadBodyUsesNoReactiveTypes() {
+            MultiValueMap<String, Object> body = CloudinaryReceiptStorage.uploadBody(
+                    "kudi9ja/receipts/K9-000001/abc",
+                    "not really a jpeg".getBytes(StandardCharsets.UTF_8),
+                    ".jpg");
+
+            assertThat(body.getFirst("public_id")).isEqualTo("kudi9ja/receipts/K9-000001/abc");
+            // Authenticated, or the receipt has a public URL. See the class doc.
+            assertThat(body.getFirst("type")).isEqualTo("authenticated");
+            // Cloudinary renames the asset without these, and the stored key
+            // would no longer find it.
+            assertThat(body.getFirst("use_filename")).isEqualTo("false");
+            assertThat(body.getFirst("unique_filename")).isEqualTo("false");
+            assertThat(body.getFirst("overwrite")).isEqualTo("false");
+
+            // The filename carries the extension, which is what Cloudinary
+            // reads the format from.
+            assertThat(body.getFirst("file")).isInstanceOf(Resource.class);
+            assertThat(((Resource) body.getFirst("file")).getFilename()).isEqualTo("receipt.jpg");
         }
 
         /**

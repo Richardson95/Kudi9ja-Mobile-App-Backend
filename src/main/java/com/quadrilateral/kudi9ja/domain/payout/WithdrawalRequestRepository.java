@@ -20,10 +20,11 @@ public interface WithdrawalRequestRepository extends JpaRepository<WithdrawalReq
     Optional<WithdrawalRequest> findByIdAndUserId(UUID id, UUID userId);
 
     /** The admin queue, oldest first. Reviewed within one working day. */
+    /** The free-text term is cast for Postgres; see {@link com.quadrilateral.kudi9ja.domain.audit.AuditRepository}. */
     @Query("""
             select w from WithdrawalRequest w
              where (:status is null or w.status = :status)
-               and (:q is null or :q = ''
+               and (coalesce(cast(:q as String), '') = ''
                     or lower(w.customerName) like lower(concat('%', :q, '%'))
                     or upper(w.customerRef) like upper(concat('%', :q, '%'))
                     or upper(w.reference) like upper(concat('%', :q, '%'))

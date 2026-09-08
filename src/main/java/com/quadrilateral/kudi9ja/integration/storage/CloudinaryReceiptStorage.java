@@ -24,9 +24,9 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -140,23 +140,13 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
         // on receipts saved before the switch.
         String key = sanitise(ownerRef) + "/" + UUID.randomUUID() + extension;
 
-        MultipartBodyBuilder body = new MultipartBodyBuilder();
-        body.part("file", asResource(content, "receipt" + extension));
-        body.part("public_id", publicId(key));
-        body.part("type", "authenticated");
-        // Cloudinary would otherwise strip an unrecognised extension and hand
-        // back a different format from the one the key claims.
-        body.part("use_filename", "false");
-        body.part("unique_filename", "false");
-        body.part("overwrite", "false");
-
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = http.post()
                     .uri(API + config.cloudName() + "/" + resourceTypeFor(key) + "/upload")
                     .header(HttpHeaders.AUTHORIZATION, basicAuth())
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(body.build())
+                    .body(uploadBody(publicId(key), content, extension))
                     .retrieve()
                     .body(Map.class);
 
@@ -374,12 +364,41 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
         };
     }
 
-    private MultiValueMap<String, org.springframework.http.HttpEntity<?>> multipart(String publicId) {
-        MultipartBodyBuilder body = new MultipartBodyBuilder();
-        body.part("public_id", publicId);
-        body.part("type", "authenticated");
-        body.part("invalidate", "true");
-        return body.build();
+    /**
+     * The body of an upload.
+     *
+     * <p>Visible for testing, and that is the whole point of it being a method.
+     * This was written with {@code MultipartBodyBuilder}, which reads as the
+     * obvious choice and is not: it is part of Spring's reactive story and
+     * touching it loads {@code org.reactivestreams.Publisher}, which is not on
+     * the classpath of a plain Web MVC service. Nothing said so at build time
+     * or at startup — the class only fails when it is first used, so every
+     * receipt upload died with a {@code NoClassDefFoundError} and the customer
+     * was told something went wrong on our side.
+     *
+     * <p>A plain {@link LinkedMultiValueMap} of strings and one {@link Resource}
+     * is written by the form converter that is already there, needs no
+     * dependency, and cannot fail this way.
+     */
+    static MultiValueMap<String, Object> uploadBody(String publicId, byte[] content, String extension) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", asResource(content, "receipt" + extension));
+        body.add("public_id", publicId);
+        body.add("type", "authenticated");
+        // Cloudinary would otherwise strip an unrecognised extension and hand
+        // back a different format from the one the key claims.
+        body.add("use_filename", "false");
+        body.add("unique_filename", "false");
+        body.add("overwrite", "false");
+        return body;
+    }
+
+    private static MultiValueMap<String, Object> multipart(String publicId) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("public_id", publicId);
+        body.add("type", "authenticated");
+        body.add("invalidate", "true");
+        return body;
     }
 
     private static String encode(String value) {

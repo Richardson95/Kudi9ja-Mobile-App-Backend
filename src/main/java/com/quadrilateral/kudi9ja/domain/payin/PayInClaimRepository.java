@@ -24,10 +24,11 @@ public interface PayInClaimRepository extends JpaRepository<PayInClaim, UUID> {
     boolean existsByReference(String reference);
 
     /** The admin queue, oldest first: the one waiting longest is reviewed first. */
+    /** The free-text term is cast for Postgres; see {@link com.quadrilateral.kudi9ja.domain.audit.AuditRepository}. */
     @Query("""
             select c from PayInClaim c
              where (:status is null or c.status = :status)
-               and (:q is null or :q = ''
+               and (coalesce(cast(:q as String), '') = ''
                     or upper(c.reference) like upper(concat('%', :q, '%'))
                     or lower(c.customerName) like lower(concat('%', :q, '%'))
                     or upper(c.customerRef) like upper(concat('%', :q, '%'))

@@ -30,10 +30,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * The admin customer list. Matches on the things an admin actually has in
      * front of them: a name, an email, a phone number, or the customer
      * reference off a bank narration.
+     *
+     * <p>The term is cast for Postgres; see {@link
+     * com.quadrilateral.kudi9ja.domain.audit.AuditRepository}.
      */
     @Query("""
             select u from User u
-             where (:q is null or :q = ''
+             where (coalesce(cast(:q as String), '') = ''
                     or lower(u.fullName) like lower(concat('%', :q, '%'))
                     or lower(u.email) like lower(concat('%', :q, '%'))
                     or u.phone like concat('%', :q, '%')
