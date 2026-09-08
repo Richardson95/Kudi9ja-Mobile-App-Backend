@@ -147,8 +147,22 @@ kudi9ja:
     argon-salt-length: 16
     argon-hash-length: 32
     argon-parallelism: 1
-    argon-memory-kb: 65536
-    argon-iterations: 3
+    # OWASP's second recommended argon2id configuration: 19 MiB with three
+    # passes. Their first is 46 MiB with one pass, and 64 MiB was chosen here
+    # originally on the reasoning that more memory is always better.
+    #
+    # It is not always better. Each hash allocates this much on the JVM heap,
+    # opening an account performs four of them, and the container runs with
+    # -XX:+ExitOnOutOfMemoryError — so on a small instance an over-generous
+    # setting does not slow sign-up down, it kills the process mid-request and
+    # the customer is told their connection failed.
+    #
+    # 19 MiB with three passes is a deliberate, published trade: roughly a
+    # third of the memory for the same resistance, because the passes make up
+    # for it. Raise it on a larger instance via the environment rather than by
+    # editing this file.
+    argon-memory-kb: ${ARGON_MEMORY_KB:19456}
+    argon-iterations: ${ARGON_ITERATIONS:3}
     # A floor the admin-settable value cannot go below.
     max-passcode-attempts: 5
     lockout-duration: PT30M

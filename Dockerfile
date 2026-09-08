@@ -47,6 +47,15 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
 # MaxRAMPercentage rather than a fixed heap: the container's memory limit is
 # set by the host, and a hard -Xmx either wastes what it was given or is killed
 # for exceeding it.
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseContainerSupport -XX:+ExitOnOutOfMemoryError"
+# 65 rather than 75. The remainder is not spare — metaspace, thread stacks, the
+# JIT's own buffers and every native allocation come out of it, and on a 512 MiB
+# instance 75% leaves too little for them. The service was killed for exceeding
+# its memory limit mid-request, which reaches the customer as a failed
+# connection rather than as an error anybody can act on.
+#
+# ExitOnOutOfMemoryError stays. A JVM that has run out of memory is not a JVM
+# worth keeping alive, and dying fast lets the host restart it cleanly rather
+# than serving nonsense for the next hour.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=65 -XX:+UseContainerSupport -XX:+ExitOnOutOfMemoryError"
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
